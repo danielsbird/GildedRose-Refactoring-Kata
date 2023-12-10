@@ -1,10 +1,18 @@
 require File.join(File.dirname(__FILE__), 'gilded_rose')
+require_relative "./updating_item"
+require_relative "./quality_change_calculator"
+require_relative "./sell_in_change_calculator"
+require_relative "./deteriorating_item_factory"
+require_relative "./aged_brie_factory"
+require_relative "./backstage_passes_factory"
 
 describe GildedRose do
 
   describe "#update_quality" do
     it "does not change the name" do
-      items = [Item.new("foo", 0, 0)]
+      items = [
+        DeterioratingItemFactory.build(item: Item.new("foo", 0, 0))
+      ]
       GildedRose.new(items).update_quality()
       expect(items[0].name).to eq "foo"
     end
@@ -16,7 +24,9 @@ describe GildedRose do
             it "decrements quality by 1" do
               sell_in = 10
               quality = 5
-              items = [Item.new("foo", sell_in, quality)]
+              items = [
+                DeterioratingItemFactory.build(item: Item.new("foo", sell_in, quality))
+              ]
 
               GildedRose.new(items).update_quality()
 
@@ -28,7 +38,9 @@ describe GildedRose do
             it "does not change quality" do
               sell_in = 10
               quality = 0
-              items = [Item.new("foo", sell_in, quality)]
+              items = [
+                DeterioratingItemFactory.build(item: Item.new("foo", sell_in, quality))
+              ]
 
               GildedRose.new(items).update_quality()
 
@@ -42,7 +54,9 @@ describe GildedRose do
             it "decrements quality by 2" do
               sell_in = 0
               quality = 5
-              items = [Item.new("foo", sell_in, quality)]
+              items = [
+                DeterioratingItemFactory.build(item: Item.new("foo", sell_in, quality))
+              ]
 
               GildedRose.new(items).update_quality()
 
@@ -54,7 +68,9 @@ describe GildedRose do
             it "decrements quality by 1 so as to not decrease quality less than 0" do
               sell_in = 0
               quality = 1
-              items = [Item.new("foo", sell_in, quality)]
+              items = [
+                DeterioratingItemFactory.build(item: Item.new("foo", sell_in, quality))
+              ]
 
               GildedRose.new(items).update_quality()
 
@@ -66,7 +82,9 @@ describe GildedRose do
             it "does not change quality so as to not decrease quality less than 0" do
               sell_in = 0
               quality = 0
-              items = [Item.new("foo", sell_in, quality)]
+              items = [
+                DeterioratingItemFactory.build(item: Item.new("foo", sell_in, quality))
+              ]
 
               GildedRose.new(items).update_quality()
 
@@ -82,7 +100,9 @@ describe GildedRose do
             it "increments quality by 1" do
               sell_in = 10
               quality = 5
-              items = [Item.new("Aged Brie", sell_in, quality)]
+              items = [
+                AgedBrieFactory.build(item: Item.new("Aged Brie", sell_in, quality))
+              ]
   
               GildedRose.new(items).update_quality()
   
@@ -92,10 +112,12 @@ describe GildedRose do
           
           # This scenario is not documented in GildedRoseRequirements.txt
           context "when sell_in date is <= 0" do
-            it "increments quality by 2" do
+            it "increases quality by 2" do
               sell_in = 0
               quality = 5
-              items = [Item.new("Aged Brie", sell_in, quality)]
+              items = [
+                AgedBrieFactory.build(item: Item.new("Aged Brie", sell_in, quality))
+              ]
   
               GildedRose.new(items).update_quality()
   
@@ -108,7 +130,9 @@ describe GildedRose do
           it "does not change quality" do
             sell_in = 10
             quality = 50
-            items = [Item.new("Aged Brie", sell_in, quality)]
+            items = [
+                AgedBrieFactory.build(item: Item.new("Aged Brie", sell_in, quality))
+            ]
 
             GildedRose.new(items).update_quality()
 
@@ -121,7 +145,18 @@ describe GildedRose do
         it "does not change quality" do
           sell_in = 100
           quality = 80
-          items = [Item.new("Sulfuras, Hand of Ragnaros", sell_in, quality)]
+          items = [
+            UpdatingItem.new(
+              item: Item.new("Sulfuras, Hand of Ragnaros", sell_in, quality),
+              quality_change_calculator: QualityChangeCalculator.new(
+                change_amount: 0,
+                change_limit: Float::INFINITY
+              ),
+              sell_in_change_calculator: SellInChangeCalculator.new(
+                change_amount: 0
+              )
+            )
+          ]
 
           GildedRose.new(items).update_quality()
 
@@ -135,7 +170,11 @@ describe GildedRose do
             it "increments quality by 1" do
               sell_in = 11
               quality = 5
-              items = [Item.new("Backstage passes to a TAFKAL80ETC concert", sell_in, quality)]
+              items = [
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", sell_in, quality)
+                )
+              ]
 
               GildedRose.new(items).update_quality()
 
@@ -146,9 +185,15 @@ describe GildedRose do
           context "when there are <= 10 days and >= 5 days until the concert" do
             it "increments quality by 2" do
               items = [
-                Item.new("Backstage passes to a TAFKAL80ETC concert", 10, 5),
-                Item.new("Backstage passes to a TAFKAL80ETC concert", 9, 5),
-                Item.new("Backstage passes to a TAFKAL80ETC concert", 6, 5),
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", 10, 5)
+                ),
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", 9, 5),
+                ),
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", 6, 5)
+                )
               ]
 
               GildedRose.new(items).update_quality()
@@ -162,9 +207,15 @@ describe GildedRose do
           context "when there are <= 5 days and >= 0 days until the concert" do
               it "increments quality by 3" do
               items = [
-                Item.new("Backstage passes to a TAFKAL80ETC concert", 5, 5),
-                Item.new("Backstage passes to a TAFKAL80ETC concert", 4, 5),
-                Item.new("Backstage passes to a TAFKAL80ETC concert", 1, 5),
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", 5, 5)
+                ),
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", 4, 5)
+                ),
+                BackstagePassesFactory.build(
+                  item: Item.new("Backstage passes to a TAFKAL80ETC concert", 1, 5)
+                )
               ]
 
               GildedRose.new(items).update_quality()
@@ -180,7 +231,11 @@ describe GildedRose do
           it "does not change quality" do
             sell_in = 10
             quality = 50
-            items = [Item.new("Backstage passes to a TAFKAL80ETC concert", sell_in, quality)]
+            items = [
+              BackstagePassesFactory.build(
+                item: Item.new("Backstage passes to a TAFKAL80ETC concert", sell_in, quality)
+              )
+            ]
 
             GildedRose.new(items).update_quality()
 
@@ -192,7 +247,11 @@ describe GildedRose do
           it "decreases quality to 0" do
             sell_in = 0
             quality = 5
-            items = [Item.new("Backstage passes to a TAFKAL80ETC concert", sell_in, quality)]
+            items = [
+              BackstagePassesFactory.build(
+                item: Item.new("Backstage passes to a TAFKAL80ETC concert", sell_in, quality)
+              )
+            ]
 
             GildedRose.new(items).update_quality()
 
@@ -207,7 +266,18 @@ describe GildedRose do
         it "decrements sell_in by 1" do
           sell_in = 10
           quality = 5
-          items = [Item.new("foo", sell_in, quality)]
+          items = [
+            UpdatingItem.new(
+              item: Item.new("foo", sell_in, quality),
+              quality_change_calculator: QualityChangeCalculator.new(
+                change_amount: -1,
+                change_limit: 0
+              ),
+              sell_in_change_calculator: SellInChangeCalculator.new(
+                change_amount: -1
+              )
+            )
+          ]
 
           GildedRose.new(items).update_quality()
 
@@ -220,7 +290,18 @@ describe GildedRose do
           # I arbitrarily chose 100 for the sell_in value for Sulfuras
           sell_in = 100
           quality = 80
-          items = [Item.new("Sulfuras, Hand of Ragnaros", sell_in, quality)]
+          items = [
+            UpdatingItem.new(
+              item: Item.new("Sulfuras, Hand of Ragnaros", sell_in, quality),
+              quality_change_calculator: QualityChangeCalculator.new(
+                change_amount: 0,
+                change_limit: Float::INFINITY
+              ),
+              sell_in_change_calculator: SellInChangeCalculator.new(
+                change_amount: 0
+              )
+            )
+          ]
 
           GildedRose.new(items).update_quality()
 
